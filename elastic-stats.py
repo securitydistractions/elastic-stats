@@ -6,11 +6,11 @@ import logging
 import re
 import csv
 import datetime
+import ipaddress
 
 class index_bucket:
 
     def __init__(self):
-        self.tmsp = datetime.datetime.now()
         self.cluster_name = ""
         self.index = ""
         self.indexCnt = 0
@@ -27,7 +27,7 @@ class index_bucket:
         self.cold_shards = 0
         self.cold_bytes = 0
     def __iter__(self):
-        return iter([self.tmsp,self.cluster_name, self.index, self.indexCnt,
+        return iter([self.cluster_name, self.index, self.indexCnt,
                 self.total_docs, self.total_shards, self.total_bytes, 
                 self.hot_docs, self.hot_shards, self.hot_bytes, 
                 self.warm_docs, self.warm_shards, self.warm_bytes, 
@@ -83,7 +83,7 @@ def my_function(node,attribute,hot,warm,cold):
             bucket.total_docs += int(index["docs.count"])
             bucket.total_shards += int(index["pri"])
 
-            bucket.indexCnt++
+            bucket.indexCnt+=1
             
             # get shards for current index
             shards = es.cat.shards( format="json",bytes="b",index=index["index"])
@@ -108,9 +108,11 @@ def my_function(node,attribute,hot,warm,cold):
 
     remote_clusters = es.remote.info(format="json")
     for remote in remote_clusters:
-        print(remote)
-        if remote["connected"]== True:
-            print(remote)
+        remote_cluster = remote_clusters[remote]
+        if remote_cluster["connected"]== True:
+            ip, separator, port = remote_cluster["seeds"][0].rpartition(':')
+            print(ip)
+            my_function(ip,attribute,hot,warm,cold)
 
         
 if __name__== "__main__":
@@ -118,7 +120,7 @@ if __name__== "__main__":
     parser = argparse.ArgumentParser(description='Generate Elasticsearch stats.')
     parser.add_argument('-n', '--node',
         action="store", dest="node",
-        help="node", default="172.17.11.115")
+        help="node", default="172.17.57.114")
     parser.add_argument('-f', '--format',
         action="store", dest="format",
         help="output format", default="csv")
@@ -149,6 +151,9 @@ if __name__== "__main__":
     parser.add_argument( '--password',
         action="store", dest="password",
         help="Password", default="")
+    parser.add_argument( '--prefix',
+        action="store", dest="prefix",
+        help="output prefix", default="elastic-stats-")
 
     logging.basicConfig(filename='elastic-stats.log', filemode='a',level=logging.DEBUG,format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
     logging.info('start')
@@ -163,15 +168,18 @@ if __name__== "__main__":
         logging.error("Fatal error")
 
 
+    suffix = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.utcnow())
 
     if args.format == "json":
-        with open('elastic_stats.json', 'w') as outfile:
+        with open(args.prefix+suffix+'.json', 'w') as outfile:
             oneway = jsonpickle.encode(all_buckets, unpicklable=False)
             outfile.write(oneway)
             outfile.close()
 
+
+
     if args.format == "csv":
-        with open('elastic_stats.csv', mode='w') as csv_file:
+        with open(args.prefix+suffix+'.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, lineterminator='\n', delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
 
             for bucket in all_buckets:
