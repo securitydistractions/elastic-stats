@@ -1,0 +1,29 @@
+input {
+
+    beats {
+      port => 5044
+    }
+  }
+  
+  filter {
+  
+      dissect {
+      
+      #\"cluster-02\",\".monitoring-alerts-0\",1,4,1,82991,4,1,82991,0,0,0,0,0,0"
+        mapping => {
+          "message" => '"%{cluster}","%{index}",%{indexcnt},%{total_docs},%{total_shards},%{total_bytes},%{hot_docs},%{hot_shards},%{hot_bytes},%{warm_docs},%{warm_shards},%{warm_bytes},%{cold_docs},%{cold_shards},%{cold_bytes}'
+        }
+      }
+  }
+  
+  output {
+  
+    stdout { codec => rubydebug }
+    
+      elasticsearch {
+      hosts => ["172.17.57.114:9200"]
+      index => "elastic-stats-001"
+      manage_template => false
+    }
+    
+  }

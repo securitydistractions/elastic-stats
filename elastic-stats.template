@@ -1,0 +1,67 @@
+put _template/elastic-stats
+{
+    "order": 10,
+
+    "index_patterns": [
+      "elastic-stats-*"
+    ],
+    "settings": {},
+    "mappings": {
+        "dynamic_templates": [
+          {
+            "strings_as_keyword": {
+              "mapping": {
+                "ignore_above": 1024,
+                "type": "keyword"
+              },
+              "match_mapping_type": "string"
+            }
+          }
+        ],
+        "properties": {
+          "indexcnt" : {
+            "type" : "long"
+          },
+          "total_bytes" : {
+            "type" : "long"
+          },
+          "total_shards" : {
+            "type" : "long"
+          },
+          "total_docs" : {
+            "type" : "long"
+          },
+          "hot_bytes" : {
+            "type" : "long"
+          },
+          "hot_shards" : {
+            "type" : "long"
+          },
+          "hot_docs" : {
+            "type" : "long"
+          },
+          "warm_bytes" : {
+            "type" : "long"
+          },
+          "warm_shards" : {
+            "type" : "long"
+          },
+          "warm_docs" : {
+            "type" : "long"
+          },
+          "cold_bytes" : {
+            "type" : "long"
+          },
+          "cold_shards" : {
+            "type" : "long"
+          },
+          "cold_docs" : {
+            "type" : "long"
+          }
+
+          
+        }
+    },
+    "aliases": {}
+  }
+
