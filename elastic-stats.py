@@ -36,8 +36,23 @@ class index_bucket:
 
 
 
-def my_function(node,attribute,hot,warm,cold):
-    es = Elasticsearch(hosts=[node])
+def my_function(node,attribute,hot,warm,cold,user,password,ssl):
+
+    if ssl:
+        myscheme = "https"
+    else:
+        myscheme = "http"    
+
+    if user != "":
+        es = Elasticsearch(hosts=[node],
+            http_auth=(user, password),
+            scheme = myscheme
+            )  
+
+    else:
+        es = Elasticsearch(hosts=[node])
+
+       
 
     h2 = es.cluster.health(format="json")
 
@@ -112,7 +127,7 @@ def my_function(node,attribute,hot,warm,cold):
         if remote_cluster["connected"]== True:
             ip, separator, port = remote_cluster["seeds"][0].rpartition(':')
             print(ip)
-            my_function(ip,attribute,hot,warm,cold)
+            my_function(ip,attribute,hot,warm,cold,user,password,ssl)
 
         
 if __name__== "__main__":
@@ -147,10 +162,10 @@ if __name__== "__main__":
         help="use SSL", default=False)
     parser.add_argument( '--user',
         action="store", dest="user",
-        help="User", default="")
+        help="User", default="elastic_stats")
     parser.add_argument( '--password',
         action="store", dest="password",
-        help="Password", default="")
+        help="Password", default="elastic_stats")
     parser.add_argument( '--prefix',
         action="store", dest="prefix",
         help="output prefix", default="elastic-stats-")
@@ -163,29 +178,28 @@ if __name__== "__main__":
     all_buckets = []
 
     try:
-        my_function(args.node,args.attribute,args.hot,args.warm,args.cold)
-    except:
-        logging.error("Fatal error")
+        my_function(args.node,args.attribute,args.hot,args.warm,args.cold,args.user,args.password,args.ssl)
 
+        suffix = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.utcnow())
 
-    suffix = '{:%Y%m%d%H%M%S}'.format(datetime.datetime.utcnow())
-
-    if args.format == "json":
-        with open(args.prefix+suffix+'.json', 'w') as outfile:
-            oneway = jsonpickle.encode(all_buckets, unpicklable=False)
-            outfile.write(oneway)
-            outfile.close()
+        if args.format == "json":
+            with open(args.prefix+suffix+'.json', 'w') as outfile:
+                oneway = jsonpickle.encode(all_buckets, unpicklable=False)
+                outfile.write(oneway)
+                outfile.close()
 
 
 
-    if args.format == "csv":
-        with open(args.prefix+suffix+'.csv', mode='w') as csv_file:
-            csv_writer = csv.writer(csv_file, lineterminator='\n', delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+        if args.format == "csv":
+            with open(args.prefix+suffix+'.csv', mode='w') as csv_file:
+                csv_writer = csv.writer(csv_file, lineterminator='\n', delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
 
-            for bucket in all_buckets:
-                csv_writer.writerow(list(bucket))    
-            csv_file.close
+                for bucket in all_buckets:
+                    csv_writer.writerow(list(bucket))    
+                csv_file.close
 
+    except Exception as err:
+        logging.error(err)
 
 
     logging.info('stop')
